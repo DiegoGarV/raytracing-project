@@ -67,15 +67,17 @@ pub struct SquarePlane {
     pub center: Vec3,
     pub normal: Vec3,
     pub size: f32,        
-    pub material: Material
+    pub material: Material,
+    pub is_slab: bool,
 }
 impl SquarePlane {
-    pub fn new(p_center: (f32, f32, f32), p_normal: (f32, f32, f32), size: f32, p_material: &str) -> Self {
+    pub fn new(p_center: (f32, f32, f32), p_normal: (f32, f32, f32), size: f32, p_material: &str, is_slab: bool) -> Self {
         SquarePlane {
             center: Vec3::new(p_center.0,p_center.1,p_center.2),
             normal:  Vec3::new(p_normal.0,p_normal.1,p_normal.2).normalize(),
             size,
             material: Material::new(p_material),
+            is_slab,
         }
     }
     pub fn get_uv(&self, point: &Vec3) -> (f32, f32) {
@@ -123,6 +125,19 @@ impl RayIntersect for SquarePlane {
             let (u,v) = self.get_uv(&point);
             let local_point:Vec3 = point - self.center;
             let half_size = self.size / 2.0;
+
+            static mut COUNTER: usize = 0;
+            const LIMIT: usize = 10;
+
+            if self.is_slab && local_point.y > 0.0 {
+                unsafe {
+                    if COUNTER < LIMIT {
+                        // println!("Slab condition met. Discarding intersection at {:?}", local_point);
+                        COUNTER += 1;
+                    }
+                }
+                return Intersect::empty();
+            }
             if local_point.x.abs() <= half_size && local_point.y.abs() <= half_size && local_point.z.abs() <= half_size {
                 return Intersect::new(point, self.normal, t, true, self.material, u, v);
             }
